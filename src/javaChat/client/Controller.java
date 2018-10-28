@@ -5,7 +5,6 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -15,6 +14,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Date;
 import java.util.ResourceBundle;
 import javafx.scene.control.Label;
@@ -26,7 +26,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
 
@@ -48,7 +47,7 @@ public class Controller implements Initializable {
     @FXML
     CheckBox saveMode;
     @FXML
-    ListView list;
+    ListView<String> list;
     @FXML
     ScrollPane listPane;
     @FXML
@@ -81,17 +80,13 @@ public class Controller implements Initializable {
         Tooltip tooltip = new Tooltip();
         tooltip.setText("Для доступа к последним отправленным сообщениям используйте клавиши DOWN и UP");
         msgField.setTooltip(tooltip);
-        // всплывающая подсказка по clientList
-        Tooltip tooltip1 = new Tooltip();
-        tooltip1.setText("Выберете адресата для отправки сообщения");
-        list.setTooltip(tooltip1);
 
         setAuthorized(false);
         loginField.setText("login1"); passField.setText("pass1"); // ...для удобства отладки
         refreshStatus();
     }
 
-    public void setAuthorized(boolean authorized) {
+    private void setAuthorized(boolean authorized) {
         this.authorized = authorized;
         if (authorized) { // аквторизован
             appPanel.setVisible(true);
@@ -163,10 +158,10 @@ public class Controller implements Initializable {
             output = new DataOutputStream(socket.getOutputStream());
             clientList = FXCollections.observableArrayList();
             list.setItems(clientList);
-            list.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+            list.setCellFactory(new Callback<>() {
                 @Override
                 public ListCell<String> call(ListView<String> param) {
-                    return new ListCell<String>() {
+                    return new ListCell<>() {
                         @Override
                         protected void updateItem(String item, boolean empty) {
                             super.updateItem(item, empty);
@@ -180,9 +175,9 @@ public class Controller implements Initializable {
                                 } else {
                                     setStyle("-fx-font-weight:normal;");
                                 }
-                                if (item.equals("ALL")) {
-                                    //setStyle("-fx-border-width:0,0,2;");
-                                }
+//                                if (item.equals("ALL")) {
+//                                    //setStyle("-fx-border-width:0,0,2;");
+//                                }
                             }
                         }
                     };
@@ -196,7 +191,7 @@ public class Controller implements Initializable {
                     sendSID();
                 }
                 try {
-                    while (true && (socket != null) && !socket.isClosed()) {
+                    while ((socket != null) && !socket.isClosed()) {
                         String msg = input.readUTF();
                         if (msg.startsWith("/")) { // если команда
                             // авторизация прошла успешно
@@ -215,23 +210,21 @@ public class Controller implements Initializable {
                                 System.out.println("Ошибка авторизации: неверный логин или пароль.");
                                 //showAlert("Ошибка авторизации: неверный логин или пароль.");
                                 setAuthorized(false);
-                                Platform.runLater(() -> {
-                                    auth_error.setText("Ошибка авторизации: неверный логин или пароль.");
-                                });
+                                Platform.runLater(() ->
+                                        auth_error.setText("Ошибка авторизации: неверный логин или пароль."));
                             }
+
                             // получение списка клиентов
                             if (msg.startsWith("/LIST ")) {
                                 System.out.println(msg);
                                 String[] data = msg.split(" ");
                                 data[0] = "ALL";
-                                Platform.runLater(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        clientList.clear();
-                                        for (int i = 0; i < data.length; i++) {
-                                            clientList.add(data[i]);
-                                        }
-                                    }
+                                Platform.runLater(() -> {
+                                    clientList.clear();
+//                                    for (String aData : data) {
+//                                        clientList.add(aData);
+//                                    }
+                                    Collections.addAll(clientList, data);
                                 });
                             }
                         } else {
@@ -261,15 +254,13 @@ public class Controller implements Initializable {
             });
             thread.setDaemon(true);
             thread.start();
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (Exception e) {
            e.printStackTrace();
         }
     }
 
     // добавление сообщения в окно чата
-    public void appendMsg(String msg) {
+    private void appendMsg(String msg) {
         if (authorized) { // выводим сообщение только внутри чата
             chat.appendText(msg);
         }
@@ -296,7 +287,7 @@ public class Controller implements Initializable {
 
         //System.out.println(list.getSelectionModel().getSelectedItem());
         // проверка адресата
-        String toNick = (String) list.getSelectionModel().getSelectedItem();
+        String toNick = list.getSelectionModel().getSelectedItem();
         if (toNick == null || toNick.equals("ALL")) { // private message
             msg = msgField.getText();
         } else {
@@ -342,7 +333,7 @@ public class Controller implements Initializable {
         }
     }
 
-    public void sendSID() {
+    private void sendSID() {
         // /SID login session_id
         write("/SID " + login + " " + sessionID);
     }
@@ -404,7 +395,6 @@ public class Controller implements Initializable {
         Platform.exit();
     }
 
-    // переключение списка клиентов
     public void toggleList() {
         if (listPane.isVisible()) {
             listPane.setVisible(false);

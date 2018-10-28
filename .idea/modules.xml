@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/JChat.iml" filepath="$PROJECT_DIR$/JChat.iml" />
+      <module fileurl="file://$PROJECT_DIR$/j2-7.iml" filepath="$PROJECT_DIR$/j2-7.iml" />
     </modules>
   </component>
 </project>

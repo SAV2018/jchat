@@ -19,17 +19,21 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" minWidth="-Infinity" prefHeight="1000.0" prefWidth="400.0" HBox.hgrow="ALWAYS" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="javaChat.client.Controller">
+<VBox alignment="CENTER" minWidth="-Infinity" prefHeight="1000.0" prefWidth="400.0" HBox.hgrow="ALWAYS"
+      xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="javaChat.client.Controller">
 
     <VBox fx:id="entryPanel" style="-fx-padding:20px;" VBox.vgrow="ALWAYS">
         <HBox alignment="TOP_CENTER" prefWidth="500">
             <VBox prefHeight="669.0" prefWidth="200.0">
-                <Label fx:id="auth_error" minHeight="-Infinity" prefHeight="37.0" prefWidth="224.0" style="-fx-font-size:12px;" text="" textAlignment="CENTER" textFill="#c61b27" wrapText="true">
+                <Label fx:id="auth_error" minHeight="-Infinity" prefHeight="37.0" prefWidth="224.0"
+                       style="-fx-font-size:12px;" textAlignment="CENTER" textFill="#c61b27" wrapText="true">
                <VBox.margin>
                   <Insets bottom="10.0" />
                </VBox.margin></Label>
                 <TextField fx:id="loginField" promptText="Введите логин" style="-fx-margin:10px;" />
-                <PasswordField fx:id="passField" onAction="#sendAuthMsg" pickOnBounds="false" promptText="Введите пароль">
+                <PasswordField fx:id="passField" onAction="#sendAuthMsg" pickOnBounds="false"
+                               promptText="Введите пароль">
                     <VBox.margin>
                         <Insets bottom="10.0" top="10.0" />
                     </VBox.margin>
@@ -46,12 +50,14 @@
                   </HBox.margin>
                </Button>
               </HBox>
-                <CheckBox fx:id="saveMode" indeterminate="false" selected="true" text="Сохранить логин и пароль">
+                <CheckBox fx:id="saveMode" selected="true" text="Сохранить логин и пароль">
                <VBox.margin>
                   <Insets bottom="10.0" top="10.0" />
                </VBox.margin></CheckBox>
 
-                <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="200.0" text="Данные для тестирования:  login1 - pass1, login2 - pass2, login3 - pass3." textFill="#1bc425" textOverrun="CLIP" wrapText="true">
+                <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="200.0"
+                       text="Данные для тестирования:  login1 - pass1, login2 - pass2, login3 - pass3."
+                       textFill="#1bc425" textOverrun="CLIP" wrapText="true">
                     <VBox.margin>
                         <Insets bottom="10.0" top="30.0" />
                     </VBox.margin></Label>
@@ -61,14 +67,14 @@
 
     <VBox fx:id="appPanel" VBox.vgrow="ALWAYS">
         <MenuBar>
-            <Menu text="Client">
-                <MenuItem fx:id="session" disable="false" onAction="#connect" text="Connect" />
+            <Menu text="Session">
+                <MenuItem fx:id="session" onAction="#connect" text="Connect" />
                 <MenuItem onAction="#disconnect" text="Disconnect" />
                 <MenuItem onAction="#logout" text="Logout" />
                 <SeparatorMenuItem />
                 <MenuItem onAction="#closeApp" text="Exit" />
             </Menu>
-            <Menu fx:id="info" text="Info">
+            <Menu text="Info">
                 <MenuItem fx:id="state" />
                 <MenuItem fx:id="server" />
                 <MenuItem fx:id="client" />
@@ -79,18 +85,18 @@
             </Menu>
         </MenuBar>
 
-      <HBox VBox.vgrow="ALWAYS">
-         <children>
-              <TextArea fx:id="chat" editable="false" focusTraversable="false" wrapText="true">
-                <font>
-                   <Font name="System Bold" size="12.0" />
-                </font>
-              </TextArea>
-              <ScrollPane fx:id="listPane" hbarPolicy="NEVER" maxWidth="100" minWidth="100" pannable="true" prefWidth="100" vbarPolicy="NEVER" VBox.vgrow="ALWAYS"  >
-                  <ListView fx:id="list" focusTraversable="false" maxWidth="100" minWidth="100" prefWidth="100.0" style="-fx-background-color:#eee;" VBox.vgrow="ALWAYS" />
-              </ScrollPane>
-         </children>
-      </HBox>
+        <HBox VBox.vgrow="ALWAYS">
+            <TextArea fx:id="chat" editable="false" focusTraversable="false" wrapText="true">
+              <font>
+                  <Font name="System Bold" size="12.0"/>
+              </font>
+            </TextArea>
+            <ScrollPane fx:id="listPane" hbarPolicy="NEVER" maxWidth="100" minWidth="100" pannable="true"
+                        prefWidth="100" vbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+                <ListView fx:id="list" focusTraversable="false" maxWidth="100" minWidth="100" prefWidth="100.0"
+                          style="-fx-background-color:#eee;" VBox.vgrow="ALWAYS"/>
+            </ScrollPane>
+        </HBox>
 
         <HBox>
             <TextField fx:id="msgField" onAction="#sendMsg" onKeyPressed="#handler" promptText="Введите сообщение" HBox.hgrow="ALWAYS" />

@@ -12,8 +12,8 @@ import java.util.TimerTask;
 import static javaChat.Server.Server.*;
 
 
-public class ClientHandler {
-    private final int AUTH_TIMEOUT = 30000; // таймаут авторизации в ms (30 сек.)
+class ClientHandler {
+    private final int AUTH_TIMEOUT = 10000; // таймаут авторизации в ms (10 сек.)
     private Server server;
     private String nick;
     private Socket socket;
@@ -23,11 +23,11 @@ public class ClientHandler {
     //private long timein;
 
 
-    public String getNick() {
+    String getNick() {
         return nick;
     }
 
-    public ClientHandler(Server server, Socket socket) {
+    ClientHandler(Server server, Socket socket) {
         try {
             this.server = server;
             this.socket = socket;
@@ -88,7 +88,7 @@ public class ClientHandler {
                                     nick = server.getAuthService().getNickBySessionID(data);
                                     if (nick != null ) {
                                         System.out.println("Сессия клиента " + nick + " [" + data[2] + "] подтверждена.");
-                                        server.updateClient(this);
+                                        updateClient(this);
                                         System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + ":" + socket.getPort() + "] авторизован.");
                                         sendToAllClients("Клиент " + nick + " вошёл в чат.\n", "server");
                                     } else {
@@ -104,7 +104,7 @@ public class ClientHandler {
                                     if (!sendToClient(data[1], data[2], nick)) {
                                         sendMsg("[server] Не найден клиент с таким ником.\n");
                                     } else {
-                                        sendMsg("[" + nick + "] <@ to " + data[1] + "> " + data[2] + "\n");
+                                        sendMsg("[" + nick + "] <private to " + data[1] + "> " + data[2] + "\n");
                                     }
                                 }
                                 // вариант через substring()
@@ -158,7 +158,7 @@ public class ClientHandler {
     }
 
     // отправляем сообщение
-    public void sendMsg(String msg) {
+    void sendMsg(String msg) {
         if (socket != null && !socket.isClosed()) {
             try {
                 output.writeUTF(msg);
@@ -168,7 +168,7 @@ public class ClientHandler {
         }
     }
 
-    public void killConnect() throws IOException {
+    void killConnect() throws IOException {
         // удаляем клиента из списка
         removeClient(this);
         // сбрасываем метку сессии
@@ -179,7 +179,7 @@ public class ClientHandler {
         sendToAllClients("Клиент " + nick + " вышел из чата.\n", "server");
     }
 
-     public static String getMD5(String input) {
+     private static String getMD5(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(input.getBytes());
