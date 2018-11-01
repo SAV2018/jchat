@@ -9,12 +9,11 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.ResourceBundle;
@@ -37,6 +36,11 @@ import static javaChat.Server.Utils.getTimeMarkShort;
 
 
 public class Controller implements Initializable {
+    private static final int LAST_MESSAGES_COUNT = 100;
+    private final String logFileName = "jchat.log";
+    private final String SERVER_ADDR = "localhost";
+    private final int SERVER_PORT = 8188;
+
     @FXML
     TextField msgField;
     @FXML
@@ -60,8 +64,7 @@ public class Controller implements Initializable {
     @FXML
     ToolBar status_bar;
 
-    private final String SERVER_ADDR = "localhost";
-    private final int SERVER_PORT = 8188;
+
     private boolean authorized = false;
     private String sessionID = null;
     private String login = null;
@@ -253,6 +256,7 @@ public class Controller implements Initializable {
                             }
                         } else {
                             appendMsg(msg);
+                            appendHistoryFile(msg);
                         }
                     }
                 } catch (EOFException e) {
@@ -287,6 +291,72 @@ public class Controller implements Initializable {
     private void appendMsg(String msg) {
         if (authorized) { // выводим сообщение только внутри чата
             chat.appendText(msg);
+        }
+    }
+
+    // запись сообщения в файл истории
+    private void appendHistoryFile(String msg) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(logFileName,true));
+            writer.write(msg);
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void getLastMessages(ActionEvent actionEvent) {
+        ArrayList<String> msgs = new ArrayList<>(); // список для 100 последних сообщений
+        BufferedReader reader = null;
+
+        try {
+            reader = new BufferedReader( new FileReader(logFileName));
+            int bytes = 0;
+            int lines = 0;
+            String s;
+
+            // читаем строки из файла истории
+            while ((s = reader.readLine()) != null) {
+                if (lines < LAST_MESSAGES_COUNT) {
+                    msgs.add(s);
+                } else {
+                    msgs.set(lines % LAST_MESSAGES_COUNT, s);
+                }
+                lines++;
+                bytes += s.length();
+            }
+            System.out.println( "Прочитано " + lines + " строк (" + bytes + " байт)." );
+
+            // выводим в окно чата последние 100 сообщений
+            appendMsg("\n****** " + LAST_MESSAGES_COUNT + " Last Messages ******\n");
+            for (int i = lines % LAST_MESSAGES_COUNT; i < Math.min(msgs.size(), LAST_MESSAGES_COUNT); i++) {
+                appendMsg(msgs.get(i)+"\n");
+            }
+            for (int i = 0; i < lines % LAST_MESSAGES_COUNT; i++) {
+                appendMsg(msgs.get(i)+"\n");
+            }
+            appendMsg("*******************************\n\n");
+
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (reader != null) {
+                    reader.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -451,6 +521,7 @@ public class Controller implements Initializable {
             }
         }
     }
+
 
 //    public void clickOnClient(MouseEvent mouseEvent) {
 //        if (mouseEvent.getClickCount() == 2) {
