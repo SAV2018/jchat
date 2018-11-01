@@ -5,8 +5,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Timer;
+
+import static javaChat.Server.Utils.getTimeMark;
+import static javaChat.Server.Utils.getTimeMarkShort;
 
 class Server {
     private ServerSocket server;
@@ -31,24 +33,26 @@ class Server {
             authService.connect();
             Socket socket;
             server = new ServerSocket(port);
-            System.out.println("Сервер запущен (порт " + server.getLocalPort() + "), ожидаем подключения...");
+            System.out.println("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
+                    "), ожидаем подключения…");
 
             //noinspection InfiniteLoopStatement
             while (true) {
                 socket = server.accept();
-                System.out.println("Клиент (" + socket.getInetAddress() + ":" + socket.getPort() + ") подключился.");
+                System.out.println("[" + getTimeMark() + "] Клиент (" + socket.getInetAddress() + ":" +
+                        socket.getPort() + ") подключился.");
                 new ClientHandler(this, socket);
             }
         } catch (IOException e) {
-            System.out.println("Ошибка инициализации сервера (порт " + port + ")");
+            System.out.println("[" + getTimeMark() + "] Ошибка инициализации сервера (порт " + port + ")");
         } catch (SQLException | ClassNotFoundException e) {
-            System.out.println("Не удалось запустить службу авторизации.");
+            System.out.println("[" + getTimeMark() + "] Не удалось запустить службу авторизации.");
             // e.printStackTrace();
         } finally {
             try {
                 if (server != null) {   // если объект создан
                     server.close();
-                    System.out.println("Сервер остановлен.");
+                    System.out.println("[" + getTimeMark() + "] Сервер остановлен.");
                 }
                 if (authService != null) {
                     authService.disconnect();
@@ -64,10 +68,10 @@ class Server {
 //        for (ClientHandler c: clients) {
 //            c.sendMsg("[" + from + "] " + msg);
 //        }
-        sendToAllClients("[" + from + "] " + msg);
+        sendToAllClients("[" + from + "●" + getTimeMarkShort() + "] " + msg);
     }
 
-    private static void sendToAllClients(String msg) { // (сообщение, от кого)
+    private static void sendToAllClients(String msg) { // (сообщение)
         // рассылаем сообщение всем клиентам
         for (ClientHandler c: clients) {
             c.sendMsg(msg);
@@ -80,7 +84,7 @@ class Server {
         for (ClientHandler client1 : clients) {
             c = client1;
             if (client.getNick().equals(c.getNick())) {
-                System.out.println("Уже есть клиент с таким ником!");
+                System.out.println("[" + getTimeMark() + "] Уже есть клиент с таким ником!");
                 // если уже есть клиент с таким ником - удаляем его
                 c.killConnect();
                 break;
@@ -106,11 +110,15 @@ class Server {
         }
     }
 
+    static void updateNick() {
+        sendClientList();
+    }
+
     // отправляем сообщение клиенту с ником nick
     static boolean sendToClient(String nick, String msg, String from) {
         for (ClientHandler c: clients) {
             if (nick.equals(c.getNick())) {
-                c.sendMsg("[" + from + "] <private> " + msg + "\n");
+                c.sendMsg("[" + from + "●" + getTimeMarkShort() + "] <private> " + msg + "\n");
                 return true;
             }
         }

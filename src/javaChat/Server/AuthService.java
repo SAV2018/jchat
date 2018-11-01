@@ -2,23 +2,24 @@ package javaChat.Server;
 
 import java.sql.*;
 
-public class AuthService {
+class AuthService {
     private final String dbname = "jchat.db";
     private Connection db;
     private Statement stmt;
-    private PreparedStatement qLogin, qSaveSID, qSID;
+    private PreparedStatement qLogin, qSaveSID, qSID, qUpdateNick;
 
-    public void connect() throws ClassNotFoundException, SQLException {
+    void connect() throws ClassNotFoundException, SQLException {
         Class.forName("org.sqlite.JDBC");
         db = DriverManager.getConnection("jdbc:sqlite:" + dbname);
         stmt = db.createStatement();
         qLogin = db.prepareStatement("SELECT * FROM users WHERE login=? AND pass=?;");
         qSaveSID = db.prepareStatement("UPDATE users SET session=? WHERE login=?;");
         qSID = db.prepareStatement("SELECT nick FROM users WHERE login=? AND session=?;");
+        qUpdateNick = db.prepareStatement("UPDATE users SET nick=? WHERE login=?;");
     }
 
     // получение ника по логину и паролю
-    public String getNickByLoginAndPass(String login, String pass) {
+    String getNickByLoginAndPass(String login, String pass) {
         try {
             //ResultSet result = stmt.executeQuery("SELECT * FROM users WHERE login='" + login + "' AND pass='" + pass + "';");
             qLogin.setString(1, login);
@@ -33,7 +34,7 @@ public class AuthService {
         return null;
     }
 
-    public void disconnect() {
+    void disconnect() {
         try {
             db.close();
         } catch (SQLException e) {
@@ -42,7 +43,7 @@ public class AuthService {
     }
 
     // сохранение метки сессии
-    public void saveSessionID(String login, String sid) {
+    void saveSessionID(String login, String sid) {
         try {
             qSaveSID.setString(2, login);
             qSaveSID.setString(1, sid);
@@ -53,7 +54,7 @@ public class AuthService {
     }
 
     // получение ника по метки сессии (SID)
-    public String getNickBySessionID(String[] data) {
+    String getNickBySessionID(String[] data) {
         try {
             qSID.setString(1, data[1]);
             qSID.setString(2, data[2]);
@@ -66,5 +67,21 @@ public class AuthService {
             e.printStackTrace();
         }
         return null;
+    }
+
+    int updateNick(String login, String nick) {
+        int result;
+
+        try {
+            qUpdateNick.setString(1, nick);
+            qUpdateNick.setString(2, login);
+            qUpdateNick.execute();
+            result = 0;
+        } catch (SQLException e) {
+            result = e.getErrorCode();
+            e.printStackTrace();
+        }
+        System.out.println(result);
+        return result;
     }
 }

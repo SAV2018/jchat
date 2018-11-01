@@ -1,12 +1,13 @@
 package javaChat.client;
 
-
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -26,7 +27,13 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Callback;
+
+import static javaChat.Server.Utils.getTimeMark;
+import static javaChat.Server.Utils.getTimeMarkShort;
 
 
 public class Controller implements Initializable {
@@ -135,7 +142,7 @@ public class Controller implements Initializable {
                 s = "";
             }
             Date time = new Date();
-            appendMsg(s + "===> " + msg[event] + String.format("%tT  ", time) + String.format("%tF", time) + "\n");
+            appendMsg(s + "==> " + msg[event] + String.format("%tT  ", time) + String.format("%tF", time) + "\n");
         }
     }
 
@@ -143,15 +150,15 @@ public class Controller implements Initializable {
     public void connect() {
         // если соединение уже установлено - выход
         if ((socket != null) && !socket.isClosed()) {
-            System.out.println("Соединение с сервером уже установлено!");
+            System.out.println("[" + getTimeMark() + "] Соединение с сервером уже установлено!");
             return;
         }
         try {
             try {
                 socket = new Socket(SERVER_ADDR, SERVER_PORT);
             } catch (Exception e) {
-                System.out.println("Не удалось подключиться к серверу.");
-                appendMsg("\n===> Не удалось подключиться к серверу [" + SERVER_ADDR + ":" + SERVER_PORT + "]\n");
+                System.out.println("[" + getTimeMark() + "] Не удалось подключиться к серверу.");
+                appendMsg("\n==> Не удалось подключиться к серверу [" + SERVER_ADDR + ":" + SERVER_PORT + "]\n");
                 return; // выходим, если соединение не установлено
             }
             input = new DataInputStream(socket.getInputStream());
@@ -202,12 +209,13 @@ public class Controller implements Initializable {
                                     nick = data[1];
                                     sessionID = data[2];
                                 }
-                                System.out.println("Вы авторизованы по именем [" + nick + "].");
-                                appendMsg("===> Вы авторизованы по именем [" + nick + "].\n");
+                                System.out.println("Вы авторизованы под именем [" + nick + "].");
+                                appendMsg("==> Вы авторизованы под именем [" + nick + "].\n");
                             }
                             // ошибка авторизации
                             if (msg.equals("/AUTH_ERROR")) {
-                                System.out.println("Ошибка авторизации: неверный логин или пароль.");
+                                System.out.println("[" + getTimeMark() +
+                                        "] Ошибка авторизации: неверный логин или пароль.");
                                 //showAlert("Ошибка авторизации: неверный логин или пароль.");
                                 setAuthorized(false);
                                 Platform.runLater(() ->
@@ -227,6 +235,22 @@ public class Controller implements Initializable {
                                     Collections.addAll(clientList, data);
                                 });
                             }
+
+                            // получение результата смены ника
+                            if (msg.startsWith("/NEW ")) {
+                                System.out.println(msg);
+                                String[] data = msg.split(" ", 3);
+                                if (data[1].equals("OK") && data.length == 3) { // ник успешно заменён
+                                    nick = data[2];
+                                    appendMsg("[server●" + getTimeMarkShort() + "] Ник успешно заменён.\n");
+                                } else {
+                                    if (data[1].equals("USED") && data.length == 3) {
+                                        appendMsg("[server] Ник " + data[2] + " уже используется.\n");
+                                    } else {
+                                        appendMsg("[server] Не удалось поменять ник.\n");
+                                    }
+                                }
+                            }
                         } else {
                             appendMsg(msg);
                         }
@@ -235,15 +259,15 @@ public class Controller implements Initializable {
                     // закрыто соединение
                 } catch (IOException e) {
                     //e.printStackTrace();
-                    appendMsg("===> Соединение с сервером потеряно.\n");
-                    System.out.println("Соединение с сервером потеряно");
+                    appendMsg("==> Соединение с сервером потеряно.\n");
+                    System.out.println("[" + getTimeMark() + "] Соединение с сервером потеряно");
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
                     try {
                         if (socket != null) {
                             socket.close();
-                            System.out.println("Соединение разорвано клиентом.");
+                            System.out.println("[" + getTimeMark() + "] Соединение разорвано клиентом.");
                         }
                         updateSessionInfo(0);
                         refreshStatus();
@@ -272,8 +296,8 @@ public class Controller implements Initializable {
             try {
                 output.writeUTF(msg);
             } catch (IOException e) {
-                System.out.println("Не удалось отправить сообщение.");
-                appendMsg("===> Не удалось отправить сообщение\n");
+                System.out.println("[" + getTimeMark() + "] Не удалось отправить сообщение.");
+                appendMsg("==> Не удалось отправить сообщение\n");
                 //e.printStackTrace();
             }
         }
@@ -412,6 +436,19 @@ public class Controller implements Initializable {
         } else {
             status_bar.setVisible(false);
             status_bar.setManaged(false);
+        }
+    }
+
+    public void changeNick(ActionEvent actionEvent) {
+        NickPrompt prompt = new NickPrompt(appPanel.getScene().getWindow());
+        String newNick = prompt.getNewNick();
+
+        if (!(newNick.isEmpty() || newNick.equals(nick))) { // пустая строка или новый ник равен старому
+            // пытаемся поменять ник - отправляем запрос на сервер
+            if (socket != null && !socket.isClosed())  {
+                System.out.println("Запрос на смену ника: " + nick + " -> " + newNick);
+                write("/NEW " + newNick);
+            }
         }
     }
 

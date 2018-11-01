@@ -10,17 +10,19 @@ import java.security.NoSuchAlgorithmException;
 import java.util.TimerTask;
 
 import static javaChat.Server.Server.*;
+import static javaChat.Server.Utils.getTimeMark;
+import static javaChat.Server.Utils.getTimeMarkShort;
 
 
 class ClientHandler {
     private final int AUTH_TIMEOUT = 10000; // таймаут авторизации в ms (10 сек.)
     private Server server;
     private String nick;
+    private String login;
     private Socket socket;
     private DataOutputStream output;
     private DataInputStream input;
     private String key = "secret_key_for_password_hash"; //
-    //private long timein;
 
 
     String getNick() {
@@ -42,7 +44,8 @@ class ClientHandler {
                     if (nick == null) { // если клиент не авторизован
                         try {
                             socket.close();
-                            System.out.println("Сервер закрыл соединение [" + socket.getRemoteSocketAddress() + "]");
+                            System.out.println("[" + getTimeMark() + "] Сервер закрыл соединение [" +
+                                    socket.getRemoteSocketAddress() + "]");
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -56,7 +59,9 @@ class ClientHandler {
                 try {
                     while (true) {
                         String msg = input.readUTF();
-                        System.out.println("От ["  + nick + ":" + socket.getInetAddress() + ":" + socket.getPort() + "]: " + msg);
+                        System.out.println("[" + getTimeMark() + "] Сообщение от [" +
+                                nick + ":" + socket.getInetAddress() + ":" + socket.getPort() + "]: " + msg);
+
                         if (msg.startsWith("/")) { // если строка начинается с "/"
                             //System.out.println(msg);
                             // запрос на авторизацию
@@ -66,45 +71,56 @@ class ClientHandler {
                                     data[2] = getMD5(key + data[1] + data[2]);
                                     //System.out.println(data[1] +" "+ data[2]); //Platform.exit();
                                     nick = server.getAuthService().getNickByLoginAndPass(data[1], data[2]);
+
                                     if (nick != null) {
                                         String sid = getMD5((data[1] + System.currentTimeMillis()));
                                         //System.out.println("session: " + sid);
                                         server.getAuthService().saveSessionID(data[1], sid);
                                         sendMsg("/AUTH_OK " + nick + " " + sid);
                                         addClient(this); // (!) с проверкой
-                                        System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + "]:" + socket.getPort() + "] авторизован.");
+                                        login = data[1]; // сохраняем логин клиента
+                                        System.out.println("[" + getTimeMark() + "] Клиент " + nick + " [" +
+                                                socket.getInetAddress() + ":" + socket.getPort() + "] авторизован.");
                                         sendToAllClients("Клиент " + nick + " вошёл в чат.\n", "server");
                                     } else {
-                                        System.out.println("Ошибка авторизации.");
+                                        System.out.println("[" + getTimeMark() + "] Ошибка авторизации.");
                                         sendMsg("/AUTH_ERROR");
                                     }
                                 }
                             }
+
                             // проверка сессии (после переподключения)
                             if (msg.startsWith("/SID ")) { // /SID login session_id
                                 //System.out.println(msg);
                                 String[] data = msg.split(" ");
                                 if (data.length == 3) {
                                     nick = server.getAuthService().getNickBySessionID(data);
-                                    if (nick != null ) {
-                                        System.out.println("Сессия клиента " + nick + " [" + data[2] + "] подтверждена.");
+
+                                    if (nick != null) {
+                                        System.out.println("[" + getTimeMark() + "] Сессия клиента " + nick +
+                                                " [" + data[2] + "] подтверждена.");
+                                        login = data[1];
                                         updateClient(this);
-                                        System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + ":" + socket.getPort() + "] авторизован.");
+                                        System.out.println("[" + getTimeMark() + "] Клиент " + nick + " [" +
+                                                socket.getInetAddress() + ":" + socket.getPort() + "] авторизован.");
                                         sendToAllClients("Клиент " + nick + " вошёл в чат.\n", "server");
                                     } else {
-                                        System.out.println("Ошибка авторизации.");
+                                        System.out.println("[" + getTimeMark() + "] Ошибка авторизации.");
                                         sendMsg("/AUTH_ERROR");
                                     }
                                 }
                             }
+
                             // отправить сообщение клиенту/группе клиентов
-                            if (msg.startsWith("/NICK ")) { // (!) ники без пробелов
+                            if (msg.startsWith("/NICK ")) { // (!) ник без пробелов
                                 String[] data = msg.split(" ", 3);
                                 if (data.length == 3) {
                                     if (!sendToClient(data[1], data[2], nick)) {
-                                        sendMsg("[server] Не найден клиент с таким ником.\n");
+                                        sendMsg("[server●" + getTimeMarkShort() +
+                                                "] Не найден клиент с таким ником (" + data[1] + ").\n");
                                     } else {
-                                        sendMsg("[" + nick + "] <private to " + data[1] + "> " + data[2] + "\n");
+                                        sendMsg("[" + nick + "●" + getTimeMarkShort() + "] <private to " +
+                                                data[1] + "> " + data[2] + "\n");
                                     }
                                 }
                                 // вариант через substring()
@@ -118,14 +134,37 @@ class ClientHandler {
 //                                    }
 //                                }
                             }
+
+                            // запрос на смену ника
+                            if (msg.startsWith("/NEW ")) { // новый ник
+                                String[] data = msg.split(" ", 2);
+                                //System.out.println(data[0] + " " + data[1]);
+                                if (data.length == 2) {
+                                    switch (server.getAuthService().updateNick(login, data[1])) {
+                                        case 0:
+                                            nick = data[1];
+                                            sendMsg("/NEW OK " + nick);
+                                            updateNick();
+                                            break;
+                                        case 19: // ник уже используется
+                                            sendMsg("/NEW USED " + data[1]);
+                                            break;
+                                        default:
+                                            sendMsg("/NEW ERROR");
+                                    }
+                                }
+                            }
+
                             // выйти из чата без потери авторизации
                             if (msg.equals("/END")) {
-                                System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + ":" + socket.getPort() + "] отключился.");
+                                System.out.println("[" + getTimeMark() + "] Клиент " + nick +
+                                        " [" + socket.getInetAddress() + ":" + socket.getPort() + "] отключился.");
                                 break;
                             }
                             // выйти из чата cо сбросом авторизации
                             if (msg.equals("/CLOSE")) {
-                                System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + ":" + socket.getPort() + "] разлогинился.");
+                                System.out.println("[" + getTimeMark() + "] Клиент " + nick + " [" +
+                                        socket.getInetAddress() + ":" + socket.getPort() + "] разлогинился.");
                                 sendMsg("/AUTH_ERROR");
                                 break;
                             }
@@ -135,7 +174,8 @@ class ClientHandler {
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println("Клиент " + nick + " [" + socket.getInetAddress() + ":" + socket.getPort() + "] закрыл соединение.");
+                    System.out.println("[" + getTimeMark() + "] Клиент " + nick + " [" + socket.getInetAddress() +
+                            ":" + socket.getPort() + "] закрыл соединение.");
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -143,7 +183,6 @@ class ClientHandler {
                         socket.close(); //
                         removeClient(this);
                         if (nick != null) { // только авторизованные клиенты
-
                             sendToAllClients("Клиент " + nick + " вышел из чата.\n", "server");
                         }
                         nick = null;
@@ -179,7 +218,7 @@ class ClientHandler {
         sendToAllClients("Клиент " + nick + " вышел из чата.\n", "server");
     }
 
-     private static String getMD5(String input) {
+    private static String getMD5(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] messageDigest = md.digest(input.getBytes());
@@ -188,9 +227,9 @@ class ClientHandler {
             //System.out.println(hashtext);
             // дополняем строку ведущими нулями (до 32 символов)
             //hashtext = "12345678901234567890";
-            hashtext = String.format("%32s",  hashtext).replace(" ", "0");
+            hashtext = String.format("%32s", hashtext).replace(" ", "0");
             return hashtext;
-        }  catch (NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
