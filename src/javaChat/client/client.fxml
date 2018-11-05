@@ -81,6 +81,7 @@
             </Menu>
             <Menu text="View">
                 <CheckMenuItem onAction="#toggleList" selected="true" text="Client List" />
+                <MenuItem onAction="#getLastMessages" text="100 Last Messages"/>
                 <CheckMenuItem onAction="#toggleStatusBar" text="Status Bar" disable="true"/>
             </Menu>
             <Menu text="Setting">
