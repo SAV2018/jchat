@@ -10,6 +10,7 @@ import java.util.Timer;
 import static javaChat.Server.Utils.getTimeMark;
 import static javaChat.Server.Utils.getTimeMarkShort;
 
+
 class Server {
     private ServerSocket server;
     private static final int port = 8188;
@@ -33,8 +34,10 @@ class Server {
             authService.connect();
             Socket socket;
             server = new ServerSocket(port);
-            System.out.println("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
+            Utils.logEvent("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
                     "), ожидаем подключения…");
+//            System.out.println("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
+//                    "), ожидаем подключения…");
 
             //noinspection InfiniteLoopStatement
             while (true) {
