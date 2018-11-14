@@ -111,9 +111,9 @@ class ClientHandler {
                                 }
                             }
 
-                            // отправить сообщение клиенту/группе клиентов
+                            // отправить сообщение клиенту
                             if (msg.startsWith("/NICK ")) { // (!) ник без пробелов
-                                String[] data = msg.split(" ", 3);
+                                String[] data = msg.split(" ",3);
                                 if (data.length == 3) {
                                     if (!sendToClient(data[1], data[2], nick)) {
                                         sendMsg("[server●" + getTimeMarkShort() +
@@ -123,16 +123,6 @@ class ClientHandler {
                                                 data[1] + "> " + data[2] + "\n");
                                     }
                                 }
-                                // вариант через substring()
-//                                if (data.length>2) {
-//                                    // вырезаем сообщение (могут быть пробелы!)
-//                                    msg = msg.substring(7 + data[1].length());
-//                                    msg = msg.trim();
-//                                    // отправляем личное сообщение
-//                                    if (!sendToClient(data[1], msg, nick)) {
-//                                        sendMsg("[server] Не найден клиент с таким ником.");
-//                                    }
-//                                }
                             }
 
                             // запрос на смену ника

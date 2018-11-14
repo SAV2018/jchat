@@ -10,6 +10,7 @@ import java.util.Timer;
 import static javaChat.Server.Utils.getTimeMark;
 import static javaChat.Server.Utils.getTimeMarkShort;
 
+
 class Server {
     private ServerSocket server;
     private static final int port = 8188;
@@ -33,26 +34,27 @@ class Server {
             authService.connect();
             Socket socket;
             server = new ServerSocket(port);
-            System.out.println("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
+            Utils.logEvent("[" + getTimeMark() + "] Сервер запущен (порт " + server.getLocalPort() +
                     "), ожидаем подключения…");
 
             //noinspection InfiniteLoopStatement
             while (true) {
                 socket = server.accept();
-                System.out.println("[" + getTimeMark() + "] Клиент (" + socket.getInetAddress() + ":" +
+                Utils.logEvent("[" + getTimeMark() + "] Клиент (" + socket.getInetAddress() + ":" +
                         socket.getPort() + ") подключился.");
                 new ClientHandler(this, socket);
             }
         } catch (IOException e) {
-            System.out.println("[" + getTimeMark() + "] Ошибка инициализации сервера (порт " + port + ")");
+            Utils.logEvent("[" + getTimeMark() + "] Ошибка инициализации сервера (порт " + port + "): "
+                    + e.getMessage());
         } catch (SQLException | ClassNotFoundException e) {
-            System.out.println("[" + getTimeMark() + "] Не удалось запустить службу авторизации.");
+            Utils.logEvent("[" + getTimeMark() + "] Не удалось запустить службу авторизации: " + e.getMessage());
             // e.printStackTrace();
         } finally {
             try {
                 if (server != null) {   // если объект создан
                     server.close();
-                    System.out.println("[" + getTimeMark() + "] Сервер остановлен.");
+                    Utils.logEvent("[" + getTimeMark() + "] Сервер остановлен.");
                 }
                 if (authService != null) {
                     authService.disconnect();
@@ -84,7 +86,7 @@ class Server {
         for (ClientHandler client1 : clients) {
             c = client1;
             if (client.getNick().equals(c.getNick())) {
-                System.out.println("[" + getTimeMark() + "] Уже есть клиент с таким ником!");
+                Utils.logEvent("[" + getTimeMark() + "] Уже есть клиент с таким ником (" + c.getNick() + ")");
                 // если уже есть клиент с таким ником - удаляем его
                 c.killConnect();
                 break;
